@@ -1,47 +1,77 @@
 #!/usr/bin/python
 
+from flask import Flask, request, render_template
+from flask_sockets import Sockets
 import database_helper as db
 import string
 import random
+import json
 from User import User
 from Message import Message
 from ReturnedData import ReturnedData
 
-#app = Flask(__name__)
+app = Flask(__name__)
+sockets = Sockets(app)
 
-def token_generator(size=10, chars=string.ascii_uppercase + string.digits):
+@app.route("/client.js")
+def clientjs():
+    return app.send_static_file("client.js")
+
+@app.route("/client.css")
+def clientcss():
+    return app.send_static_file("client.css")
+
+@app.route("/serverstub.js")
+def serverstubjs():
+    return app.send_static_file("serverstub.js")
+
+@app.route("/wimage.png")
+def wimage():
+    return app.send_static_file("wimage.png")
+
+@app.route('/')
+def index():
+    return render_template('client.html')
+
+
+def token_generator(size=15, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 
-def sign_in(email, password):
-    userId = db.get_userId_by_email(email)
+@app.route("/sign_in", methods=["POST"])
+def sign_in():
+    data = request.get_json(silent = True) # get data
+    userId = db.get_userId_by_email(data["email"])
     if userId == None:
         return ReturnedData(False, "Email not found", None).createJSON()
-    elif db.get_user_by_id(userIds).password != password:
+    elif db.get_user_by_id(userId).password != data["password"]:
         return ReturnedData(False, "The password is not correct", None).createJSON()
     else:
         token = token_generator()
         if db.insert_token(token, userId):
-            return ReturnedData(True, "User signed in", token).createJSON() # TODO: Hay que pasar token a json?
+            return ReturnedData(True, "User signed in", token).createJSON()
         else:
             return ReturnedData(False, "Database error", None).createJSON()
 
 
-
-def sign_up(email, password, firstname, familyname, gender, city, country):
-    if db.get_userId_by_email(email) != None:  # no success
+@app.route("/sign_up", methods=["POST"])
+def sign_up():
+    data = request.get_json(silent = True) # get data
+    if db.get_userId_by_email(data["email"]) != None:  # no success
         return ReturnedData(False, "Email already exists", None).createJSON()
     else:
-        user = User(email, password, firstname,
-                    familyname, gender, city, country)
+        user = User(data["email"], data["password"], data["firstname"],
+                    data["familyname"], data["gender"], data["city"], data["country"])
         if db.insert_user(user):
             return ReturnedData(True, "User successfully created", None).createJSON()
         else:
             return ReturnedData(False, "Database error", None).createJSON()
 
 
-def sign_out(token):
-    if db.delete_token(token):
+@app.route("/sign_out", methods=["POST"])
+def sign_out():
+    data = request.get_json(silent = True)
+    if db.delete_token(data["token"]):
         return ReturnedData(True, "Signed out", None).createJSON()
     else:
         return ReturnedData(False, "Database error", None).createJSON()
@@ -59,19 +89,44 @@ def change_password(token, old_password, new_password):
         else:
             return ReturnedData(False, "Database error", None).createJSON()
 
-# Empieza Isma
+
+def get_user_data_by_token(token):
+    if userId == db.get_userId_by_token(token) == None:
+        return ReturnedData(False, "Invalid Token", None).createJSON()
+    else:
+        if userId == None:
+            return ReturnedData(False, "Invalid email", None).createJSON()
+        else:
+            user = db.get_user_by_id(userId)
+
+            return ReturnedData(True, "User found", user)
 
 
-def get_user_data_by_token():
-    pass
+
+def get_user_data_by_email(email):
+    userId = db.get_userId_by_email(email)
+
+    if userId == None:
+        return ReturnedData(False, "Invalid email", None).createJSON()
+    else:
+        user = db.get_user_by_id(userId)
+        return ReturnedData(True, "User found", user)
 
 
-def get_user_data_by_email():
-    pass
 
+def get_user_messages_by_token(token):
+    userId = db.get_userId_by_token(token)
 
-def get_user_messages_by_token():
-    pass
+    if userId == None:
+        return ReturnedData(False, "Invalid Token", None).createJSON()
+    else:
+        messages = db.get_messages_by_user(userId)
+        rData = ReturnedData(True, "Messages found")
+        for msg in messages:
+            rData.addToData(msg.createJSON())
+
+        return rData.createJSON()
+
 
 
 def get_user_messages_by_email(token, email):
@@ -79,7 +134,7 @@ def get_user_messages_by_email(token, email):
         return ReturnedData(False, "Invalid Token", None).createJSON()
     else:
         userId = db.get_userId_by_email(email)
-        if user == None:
+        if userId == None:
             return ReturnedData(False, "Invalid email", None).createJSON()
         else:
             messages = db.get_messages_by_user(userId)
@@ -87,8 +142,24 @@ def get_user_messages_by_email(token, email):
             for msg in messages:
                 rData.addToData(msg.createJSON())
 
-            return rData.createJSON()  # Funciona?
+            return rData.createJSON()
 
 
-def post_message():
-    pass
+def post_message(message, reader, writer):
+    msg = Message(writer, reader, message)
+    toId = get_userId_by_email(msg.reader)
+    if toId == None:
+        return ReturnedData(False, "Invalid reader", None).createJSON()
+
+    fromId = get_userId_by_email(msg.writer)
+    if fromId == None:
+        return ReturnedData(False, "Invalid writer", None).createJSON()
+    else:
+        db.insert_message(msg)
+        return ReturnedData(True, "Message sent", None).createJSON()
+
+if __name__ == "__main__":
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
+    server.serve_forever()
