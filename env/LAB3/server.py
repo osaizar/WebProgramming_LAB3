@@ -95,30 +95,28 @@ def change_password():
 @app.route("/get_user_by_token", methods=["GET"])
 def get_user_data_by_token():
     data = request.get_json(silent = True)
-    if userId == db.get_userId_by_token(data["token"]) == None:
-        return ReturnedData(False, "Invalid Token", None).createJSON()
-    else:
-        if userId == None:
-            return ReturnedData(False, "Invalid email", None).createJSON()
-        else:
-            user = db.get_user_by_id(userId)
-
-            return ReturnedData(True, "User found", user)
-
-
-@app.route("/get_user_by_email", methods=["GET"])
-def get_user_data_by_email():
-    data = request.get_json(silent = True)
-
-    userId = db.get_userId_by_email(data["email"])
-
+    userId == db.get_userId_by_token(data["token"])
     if userId == None:
-        return ReturnedData(False, "Invalid email", None).createJSON()
+        return ReturnedData(False, "Invalid Token", None).createJSON()
     else:
         user = db.get_user_by_id(userId)
         return ReturnedData(True, "User found", user)
 
 
+@app.route("/get_user_by_email", methods=["GET"])
+def get_user_data_by_email():
+    data = request.get_json(silent = True)
+    myUserId == db.get_userId_by_token(data["token"])
+    if myUserId  == None:
+        return ReturnedData(False, "Invalid Token", None).createJSON()
+    else:
+        userId = db.get_userId_by_email(data["email"])
+
+        if userId == None:
+            return ReturnedData(False, "Invalid email", None).createJSON()
+        else:
+            user = db.get_user_by_id(userId)
+            return ReturnedData(True, "User found", user)
 
 def get_user_messages_by_token(token):
     userId = db.get_userId_by_token(token)
