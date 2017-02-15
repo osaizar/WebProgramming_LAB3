@@ -77,21 +77,25 @@ def sign_out():
         return ReturnedData(False, "Database error", None).createJSON()
 
 
-def change_password(token, old_password, new_password):
-    userId = db.get_userId_by_token(token)
+@app.route("/change_password", methods=["POST"])
+def change_password():
+    data = request.get_json(silent = True)
+
+    userId = db.get_userId_by_token(data["token"])
     if userId == None:
         return ReturnedData(False, "The token is not correct", None).createJSON()
-    elif db.get_user_by_id(userIds).password != old_password:
+    elif db.get_user_by_id(userId).password != data["old_password"]:
         return ReturnedData(False, "The password is not correct", None).createJSON()
     else:
-        if db.change_user_password(userId, new_password):
+        if db.change_user_password(userId, data["new_password"]):
             return ReturnedData(True, "Password changed", None).createJSON()
         else:
             return ReturnedData(False, "Database error", None).createJSON()
 
-
-def get_user_data_by_token(token):
-    if userId == db.get_userId_by_token(token) == None:
+@app.route("/get_user_by_token", methods=["GET"])
+def get_user_data_by_token():
+    data = request.get_json(silent = True)
+    if userId == db.get_userId_by_token(data["token"]) == None:
         return ReturnedData(False, "Invalid Token", None).createJSON()
     else:
         if userId == None:
@@ -102,9 +106,11 @@ def get_user_data_by_token(token):
             return ReturnedData(True, "User found", user)
 
 
-
+@app.route("/get_user_by_email", methods=["GET"])
 def get_user_data_by_email(email):
-    userId = db.get_userId_by_email(email)
+    data = request.get_json(silent = True)
+
+    userId = db.get_userId_by_email(data["email"])
 
     if userId == None:
         return ReturnedData(False, "Invalid email", None).createJSON()

@@ -165,14 +165,13 @@ function changePassword() {
 
     var npassword = document.forms["changePassForm"]["new_password"].value;
     var cpassword = document.forms["changePassForm"]["current_password"].value;
-    var server_msg = serverstub.changePassword(localStorage.getItem("token"), cpassword, npassword);
-
+    var token = localStorage.getItem("token");
+    var server_msg = sendToWebSocket({"token":token, "old_password": cpassword, "new_password": npassword}, "/change_password", "POST");
     if (!server_msg.success) {
         showChangePasswordError(server_msg.message);
     } else {
         showChangePasswordSuccess(server_msg.message);
     }
-
 
     return false;
 }
@@ -195,7 +194,7 @@ function showChangePasswordSuccess(message) {
 function renderHome() {
 
     var token = localStorage.getItem("token");
-    var server_msg = serverstub.getUserDataByToken(token);
+    var server_msg = sendToWebSocket({"token":token}, "/get_user_by_token", "GET");
     var userData;
 
     if (server_msg.success) {
@@ -218,7 +217,7 @@ function renderHome() {
 function sendMsg() {
 
     var token = localStorage.getItem("token");
-    var server_msg = serverstub.getUserDataByToken(token);
+    var server_msg = sendToWebSocket({"token":token}, "/get_user_by_token", "GET");
     var data;
 
     if (server_msg.success) {
@@ -316,7 +315,8 @@ function searchUser() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
-    var server_msg = serverstub.getUserDataByEmail(token, email);
+    //cuidao que no usamos token en get user data by email, deberiamos validar el token no?
+    var server_msg = sendToWebSocket({"token":token,"email":email}, "/get_user_by_email", "GET");
     var userData;
 
 
