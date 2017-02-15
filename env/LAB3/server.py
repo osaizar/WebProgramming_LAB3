@@ -107,7 +107,7 @@ def get_user_data_by_token():
 
 
 @app.route("/get_user_by_email", methods=["GET"])
-def get_user_data_by_email(email):
+def get_user_data_by_email():
     data = request.get_json(silent = True)
 
     userId = db.get_userId_by_email(data["email"])
