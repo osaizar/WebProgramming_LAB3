@@ -1,3 +1,4 @@
+import json
 
 class User(object):
 
@@ -24,6 +25,3 @@ class User(object):
         data["password"] = self.password
 
         return json.dumps(data)
-
-    def __str__(self):
-        return self.firstname+" "+self.email

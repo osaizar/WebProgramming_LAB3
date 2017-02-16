@@ -2,18 +2,18 @@ import json
 
 class ReturnedData(object):
 
-    def __init__(self, success, message, data = []):
+    def __init__(self, success, message, data = '"Undefined"'):
         self.success = success
         self.message = message
         self.data = data
-
-    def addToData(self, node):
-        self.data.append(node)
 
     def createJSON(self):
         rdata = {}
         rdata["success"] = self.success
         rdata["message"] = self.message
-        rdata["data"] = self.data
+        rdata["data"] = "DATAHERE"
 
-        return json.dumps(rdata)
+        rt = json.dumps(rdata)
+        rt = rt.replace('"DATAHERE"', self.data)
+
+        return rt

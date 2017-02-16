@@ -22,7 +22,6 @@ displayView = function() {
 
 window.onload = function() {
     displayView();
-    alert("JS!");
 };
 
 function sendToWebSocket(data, url, method){
@@ -31,12 +30,13 @@ function sendToWebSocket(data, url, method){
 
     xmlhttp.open(method, url);
     xmlhttp.setRequestHeader("Content-Type", "application/json");
+    alert("Sending "+JSON.stringify(data))
     xmlhttp.send(JSON.stringify(data));
 
-    while (response == ""){
-      alert(response);
-      response = xmlhttp.responseText;
-    }
+    response = xmlhttp.responseText;
+    alert(response);
+    response = xmlhttp.responseText;
+    alert(response);
 
     return JSON.parse(response);
 }
@@ -53,7 +53,7 @@ function logIn() {
     if (!server_msg.success) {
         showSignUpError(server_msg.message);
     } else {
-        localStorage.setItem("token", server_msg.data);
+        localStorage.setItem("token", server_msg.data.token);
         displayView();
     }
     return false;
@@ -115,10 +115,10 @@ function signOut() {
     var server_msg = sendToWebSocket({"token":token}, "/sign_out", "POST");
     if (!server_msg.success) {
         showChangePasswordError(server_msg.message);
-    }else{
-      localStorage.setItem("token", "undefined");
-      displayView();
     }
+    //else
+    localStorage.setItem("token", "undefined");
+    displayView();
 }
 
 function openTab(tabType, tabName) {
@@ -194,7 +194,8 @@ function showChangePasswordSuccess(message) {
 function renderHome() {
 
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token}, "/get_user_by_token", "GET");
+    var data = {"token":token};
+    var server_msg = sendToWebSocket(data, "/get_user_data_by_token", "POST");
     var userData;
 
     if (server_msg.success) {
@@ -217,7 +218,7 @@ function renderHome() {
 function sendMsg() {
 
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token}, "/get_user_by_token", "GET");
+    var server_msg = sendToWebSocket({"token":token}, "/get_user_by_token", "POST");
     var data;
 
     if (server_msg.success) {
@@ -258,7 +259,7 @@ function sendMsgTo() {
 function reloadUserMsgs() {
 
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token}, "/get_user_messages_by_token", "GET");
+    var server_msg = sendToWebSocket({"token":token}, "/get_user_messages_by_token", "POST");
     var messages;
 
     if (server_msg.success) {
@@ -286,7 +287,7 @@ function reloadMsgs() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
-    var server_msg = sendToWebSocket({"token":token, "email":email}, "/get_user_messages_by_email", "GET");
+    var server_msg = sendToWebSocket({"token":token, "email":email}, "/get_user_messages_by_email", "POST");
     var messages;
 
     if (server_msg.success) {
@@ -315,7 +316,7 @@ function searchUser() {
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
     //cuidao que no usamos token en get user data by email, deberiamos validar el token no?
-    var server_msg = sendToWebSocket({"token":token,"email":email}, "/get_user_by_email", "GET");
+    var server_msg = sendToWebSocket({"token":token,"email":email}, "/get_user_by_email", "POST");
     var userData;
 
 

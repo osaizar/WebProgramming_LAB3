@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sqlite3
 from User import User
-from Message import Message
+from Message import Message, MessageList
 
 
 def dict_factory(cursor, row):  # return dictionary instead of tuple
@@ -72,7 +72,7 @@ def get_userId_by_token(token):
     result = cur.fetchone()
 
     if result:
-        userId = result["id"]
+        userId = result["userId"]
     else:
         userId = None
 
@@ -134,7 +134,7 @@ def get_messages_by_user(userId):
         "SELECT msg, toId, fromId FROM Message WHERE toId = %s" % userId)
 
     result = cur.fetchall()
-    msgs = []
+    msgs = MessageList()
     for msg in result:
         writer = get_user_by_id(msg["fromId"])
         reader = get_user_by_id(userId)

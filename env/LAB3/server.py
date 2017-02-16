@@ -7,7 +7,7 @@ import string
 import random
 import json
 from User import User
-from Message import Message
+from Message import Message, MessageList
 from ReturnedData import ReturnedData
 
 app = Flask(__name__)
@@ -43,38 +43,41 @@ def sign_in():
     data = request.get_json(silent = True) # get data
     userId = db.get_userId_by_email(data["email"])
     if userId == None:
-        return ReturnedData(False, "Email not found", None).createJSON()
+        return ReturnedData(False, "Email not found").createJSON()
     elif db.get_user_by_id(userId).password != data["password"]:
-        return ReturnedData(False, "The password is not correct", None).createJSON()
+        return ReturnedData(False, "The password is not correct").createJSON()
     else:
         token = token_generator()
+        jToken = {}
+        jToken["token"] = token
+        jToken = json.dumps(jToken)
         if db.insert_token(token, userId):
-            return ReturnedData(True, "User signed in", token).createJSON()
+            return ReturnedData(True, "User signed in", jToken).createJSON()
         else:
-            return ReturnedData(False, "Database error", None).createJSON()
+            return ReturnedData(False, "Database error").createJSON()
 
 
 @app.route("/sign_up", methods=["POST"])
 def sign_up():
     data = request.get_json(silent = True) # get data
     if db.get_userId_by_email(data["email"]) != None:  # no success
-        return ReturnedData(False, "Email already exists", None).createJSON()
+        return ReturnedData(False, "Email already exists").createJSON()
     else:
         user = User(data["email"], data["password"], data["firstname"],
                     data["familyname"], data["gender"], data["city"], data["country"])
         if db.insert_user(user):
-            return ReturnedData(True, "User successfully created", None).createJSON()
+            return ReturnedData(True, "User successfully created").createJSON()
         else:
-            return ReturnedData(False, "Database error", None).createJSON()
+            return ReturnedData(False, "Database error").createJSON()
 
 
 @app.route("/sign_out", methods=["POST"])
 def sign_out():
     data = request.get_json(silent = True)
     if db.delete_token(data["token"]):
-        return ReturnedData(True, "Signed out", None).createJSON()
+        return ReturnedData(True, "Signed out").createJSON()
     else:
-        return ReturnedData(False, "Database error", None).createJSON()
+        return ReturnedData(False, "Database error").createJSON()
 
 
 @app.route("/change_password", methods=["POST"])
@@ -83,67 +86,63 @@ def change_password():
 
     userId = db.get_userId_by_token(data["token"])
     if userId == None:
-        return ReturnedData(False, "The token is not correct", None).createJSON()
+        return ReturnedData(False, "The token is not correct").createJSON()
     elif db.get_user_by_id(userId).password != data["old_password"]:
-        return ReturnedData(False, "The password is not correct", None).createJSON()
+        return ReturnedData(False, "The password is not correct").createJSON()
     else:
         if db.change_user_password(userId, data["new_password"]):
-            return ReturnedData(True, "Password changed", None).createJSON()
+            return ReturnedData(True, "Password changed").createJSON()
         else:
-            return ReturnedData(False, "Database error", None).createJSON()
+            return ReturnedData(False, "Database error").createJSON()
 
-@app.route("/get_user_by_token", methods=["GET"])
+@app.route("/get_user_data_by_token", methods=["POST"])
 def get_user_data_by_token():
     data = request.get_json(silent = True)
-    userId == db.get_userId_by_token(data["token"])
+    userId = db.get_userId_by_token(data["token"])
     if userId == None:
-        return ReturnedData(False, "Invalid Token", None).createJSON()
+        return ReturnedData(False, "Invalid Token").createJSON()
     else:
         user = db.get_user_by_id(userId)
-        return ReturnedData(True, "User found", user)
+        return ReturnedData(True, "User found", user.createJSON()).createJSON()
 
 
-@app.route("/get_user_by_email", methods=["GET"])
+@app.route("/get_user_by_email", methods=["POST"])
 def get_user_data_by_email():
     data = request.get_json(silent = True)
-    myUserId == db.get_userId_by_token(data["token"])
+    myUserId = db.get_userId_by_token(data["token"])
     if myUserId  == None:
-        return ReturnedData(False, "Invalid Token", None).createJSON()
+        return ReturnedData(False, "Invalid Token").createJSON()
     else:
         userId = db.get_userId_by_email(data["email"])
 
         if userId == None:
-            return ReturnedData(False, "Invalid email", None).createJSON()
+            return ReturnedData(False, "Invalid email").createJSON()
         else:
             user = db.get_user_by_id(userId)
-            return ReturnedData(True, "User found", user)
+            return ReturnedData(True, "User found", user).createJSON()
 
-@app.route("/get_user_messages_by_token", methods=["GET"])
+@app.route("/get_user_messages_by_token", methods=["POST"])
 def get_user_messages_by_token():
     data = request.get_json(silent = True)
     userId = db.get_userId_by_token(data["token"])
 
     if userId == None:
-        return ReturnedData(False, "Invalid Token", None).createJSON()
+        return ReturnedData(False, "Invalid Token").createJSON()
     else:
         messages = db.get_messages_by_user(userId)
-        rData = ReturnedData(True, "Messages found")
-        for msg in messages:
-            rData.addToData(msg.createJSON())
-
-        return rData.createJSON()
+        return ReturnedData(True, "Messages found", messages.createJSON()).createJSON()
 
 
-@app.route("/get_user_messages_by_email", methods=["GET"])
+@app.route("/get_user_messages_by_email", methods=["POST"])
 def get_user_messages_by_email():
     data = request.get_json(silent = True)
 
     if db.get_userId_by_token(data["token"]) == None:
-        return ReturnedData(False, "Invalid Token", None).createJSON()
+        return ReturnedData(False, "Invalid Token").createJSON()
     else:
         userId = db.get_userId_by_email(data["email"])
         if userId == None:
-            return ReturnedData(False, "Invalid email", None).createJSON()
+            return ReturnedData(False, "Invalid email").createJSON()
         else:
             messages = db.get_messages_by_user(userId)
             rData = ReturnedData(True, "Messages found")
@@ -158,14 +157,14 @@ def post_message():
     msg = Message(writer, reader, message)
     toId = get_userId_by_email(msg.reader)
     if toId == None:
-        return ReturnedData(False, "Invalid reader", None).createJSON()
+        return ReturnedData(False, "Invalid reader").createJSON()
 
     fromId = get_userId_by_email(msg.writer)
     if fromId == None:
-        return ReturnedData(False, "Invalid writer", None).createJSON()
+        return ReturnedData(False, "Invalid writer").createJSON()
     else:
         db.insert_message(msg)
-        return ReturnedData(True, "Message sent", None).createJSON()
+        return ReturnedData(True, "Message sent").createJSON()
 
 if __name__ == "__main__":
     from gevent import pywsgi
