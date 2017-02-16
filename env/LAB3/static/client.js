@@ -218,7 +218,7 @@ function renderHome() {
 function sendMsg() {
 
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token}, "/get_user_by_token", "POST");
+    var server_msg = sendToWebSocket({"token":token}, "/get_user_data_by_token", "POST");
     var data;
 
     if (server_msg.success) {
@@ -231,7 +231,7 @@ function sendMsg() {
 
     document.forms["msgForm"]["message"].value = "";
 
-    var server_msg = sendToWebSocket({"token":token, "msg":msg,"email": data.email}, "/post_message", "POST");
+    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": data.email}, "/post_message", "POST");
 
     reloadUserMsgs();
 
@@ -247,7 +247,7 @@ function sendMsgTo() {
     var email = document.forms["userSearchForm"]["email"].value;
     var msg = document.forms["msgToForm"]["message"].value;
 
-    var server_msg = sendToWebSocket({"token":token, "msg":msg,"email": email}, "/post_message", "POST");
+    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": email}, "/post_message", "POST");
     reloadMsgs();
 
     document.getElementById("msgTo").value = "";

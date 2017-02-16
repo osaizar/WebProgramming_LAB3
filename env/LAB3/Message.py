@@ -2,7 +2,7 @@ import json
 
 class Message(object):
 
-    def __init__(self, writer, reader, content):
+    def __init__(self, writer, reader, content): #writer and reader are emails
         self.writer = writer
         self.reader = reader
         self.content = content
@@ -27,10 +27,10 @@ class MessageList(object):
         self.messages.append(msg)
 
     def createJSON(self):
-        data = "["
+        data = ""
         for msg in self.messages:
             data += msg.createJSON()+","
 
-        data = data[:-1]+"]"
+        data = "["+data[:-1]+"]"
 
         return data

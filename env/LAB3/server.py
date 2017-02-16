@@ -119,7 +119,7 @@ def get_user_data_by_email():
             return ReturnedData(False, "Invalid email").createJSON()
         else:
             user = db.get_user_by_id(userId)
-            return ReturnedData(True, "User found", user).createJSON()
+            return ReturnedData(True, "User found", user.createJSON()).createJSON()
 
 @app.route("/get_user_messages_by_token", methods=["POST"])
 def get_user_messages_by_token():
@@ -145,21 +145,20 @@ def get_user_messages_by_email():
             return ReturnedData(False, "Invalid email").createJSON()
         else:
             messages = db.get_messages_by_user(userId)
-            rData = ReturnedData(True, "Messages found")
-            for msg in messages:
-                rData.addToData(msg.createJSON())
-
-            return rData.createJSON()
+            return ReturnedData(True, "Messages found", messages.createJSON()).createJSON()
 
 @app.route("/post_message", methods=["POST"])
 def post_message():
     data = request.get_json(silent = True)
-    msg = Message(writer, reader, message)
-    toId = get_userId_by_email(msg.reader)
+    writerId = db.get_userId_by_token(data["token"])
+    writer = db.get_user_by_id(writerId)
+
+    msg = Message(writer.email, data["reader"], data["msg"])
+    toId = db.get_userId_by_email(msg.reader)
     if toId == None:
         return ReturnedData(False, "Invalid reader").createJSON()
 
-    fromId = get_userId_by_email(msg.writer)
+    fromId = db.get_userId_by_email(msg.writer)
     if fromId == None:
         return ReturnedData(False, "Invalid writer").createJSON()
     else:
