@@ -118,8 +118,10 @@ def get_user_data_by_email():
             user = db.get_user_by_id(userId)
             return ReturnedData(True, "User found", user)
 
-def get_user_messages_by_token(token):
-    userId = db.get_userId_by_token(token)
+@app.route("/get_user_messages_by_token", methods=["GET"])
+def get_user_messages_by_token():
+    data = request.get_json(silent = True)
+    userId = db.get_userId_by_token(data["token"])
 
     if userId == None:
         return ReturnedData(False, "Invalid Token", None).createJSON()
@@ -132,12 +134,14 @@ def get_user_messages_by_token(token):
         return rData.createJSON()
 
 
+@app.route("/get_user_messages_by_email", methods=["GET"])
+def get_user_messages_by_email():
+    data = request.get_json(silent = True)
 
-def get_user_messages_by_email(token, email):
-    if db.get_userId_by_token(token) == None:
+    if db.get_userId_by_token(data["token"]) == None:
         return ReturnedData(False, "Invalid Token", None).createJSON()
     else:
-        userId = db.get_userId_by_email(email)
+        userId = db.get_userId_by_email(data["email"])
         if userId == None:
             return ReturnedData(False, "Invalid email", None).createJSON()
         else:
@@ -148,8 +152,9 @@ def get_user_messages_by_email(token, email):
 
             return rData.createJSON()
 
-
-def post_message(message, reader, writer):
+@app.route("/post_message", methods=["POST"])
+def post_message():
+    data = request.get_json(silent = True)
     msg = Message(writer, reader, message)
     toId = get_userId_by_email(msg.reader)
     if toId == None:

@@ -230,7 +230,7 @@ function sendMsg() {
 
     document.forms["msgForm"]["message"].value = "";
 
-    serverstub.postMessage(token, msg, data.email);
+    var server_msg = sendToWebSocket({"token":token, "msg":msg,"email": data.email}, "/post_message", "POST");
 
     reloadUserMsgs();
 
@@ -246,8 +246,7 @@ function sendMsgTo() {
     var email = document.forms["userSearchForm"]["email"].value;
     var msg = document.forms["msgToForm"]["message"].value;
 
-    serverstub.postMessage(token, msg, email);
-
+    var server_msg = sendToWebSocket({"token":token, "msg":msg,"email": email}, "/post_message", "POST");
     reloadMsgs();
 
     document.getElementById("msgTo").value = "";
@@ -259,7 +258,7 @@ function sendMsgTo() {
 function reloadUserMsgs() {
 
     var token = localStorage.getItem("token");
-    var server_msg = serverstub.getUserMessagesByToken(token);
+    var server_msg = sendToWebSocket({"token":token}, "/get_user_messages_by_token", "GET");
     var messages;
 
     if (server_msg.success) {
@@ -287,7 +286,7 @@ function reloadMsgs() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
-    var server_msg = serverstub.getUserMessagesByEmail(token, email);
+    var server_msg = sendToWebSocket({"token":token, "email":email}, "/get_user_messages_by_email", "GET");
     var messages;
 
     if (server_msg.success) {
