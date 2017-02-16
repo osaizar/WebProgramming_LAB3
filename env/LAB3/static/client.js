@@ -115,10 +115,11 @@ function signOut() {
     var server_msg = sendToWebSocket({"token":token}, "/sign_out", "POST");
     if (!server_msg.success) {
         showChangePasswordError(server_msg.message);
+        displayView();
+    }else{
+      localStorage.setItem("token", "undefined");
+      displayView();
     }
-    //else
-    localStorage.setItem("token", "undefined");
-    displayView();
 }
 
 function openTab(tabType, tabName) {
