@@ -42,7 +42,7 @@ function sendToWebSocket(data, url, method){
 }
 
 
-function logIn() {
+function signIn() {
 
     var email = document.forms["loginForm"]["email"].value;
     var password = document.forms["loginForm"]["password"].value;
@@ -60,7 +60,7 @@ function logIn() {
 }
 
 
-function showSignUpError(message) {
+function showSignUpError(message) { // se usa en sigUp y signIn
     document.getElementById("messageSignUp").innerHTML = message;
     document.getElementById("signUpError").style.display = "block";
 }
@@ -156,7 +156,7 @@ function openTab(tabType, tabName) {
 
 
     if (tabName == "home") {
-        renderHome();
+        renderCurrentUserPage();
     }
 
 }
@@ -177,7 +177,7 @@ function changePassword() {
     return false;
 }
 
-function showChangePasswordError(message) {
+function showChangePasswordError(message) { // se usa en signOut tambien
     document.getElementById("messageChPassword").innerHTML = message;
     document.getElementById("chPasswordError").style.display = "block";
 
@@ -192,7 +192,7 @@ function showChangePasswordSuccess(message) {
 }
 
 
-function renderHome() {
+function renderCurrentUserPage() {
 
     var token = localStorage.getItem("token");
     var data = {"token":token};
@@ -212,11 +212,11 @@ function renderHome() {
     document.getElementById("cityField").innerHTML = userData.city;
     document.getElementById("emailField").innerHTML = userData.email;
 
-    reloadUserMsgs();
+    reloadUserMessages();
 }
 
 
-function sendMsg() {
+function sendMessage() {
 
     var token = localStorage.getItem("token");
     var server_msg = sendToWebSocket({"token":token}, "/get_user_data_by_token", "POST");
@@ -232,9 +232,9 @@ function sendMsg() {
 
     document.forms["msgForm"]["message"].value = "";
 
-    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": data.email}, "/post_message", "POST");
+    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": data.email}, "/send_message", "POST");
 
-    reloadUserMsgs();
+    reloadUserMessages();
 
     document.getElementById("msgToMe").value = "";
 
@@ -242,14 +242,14 @@ function sendMsg() {
 }
 
 
-function sendMsgTo() {
+function sendMessageTo() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
     var msg = document.forms["msgToForm"]["message"].value;
 
-    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": email}, "/post_message", "POST");
-    reloadMsgs();
+    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": email}, "/send_message", "POST");
+    reloadMessages();
 
     document.getElementById("msgTo").value = "";
 
@@ -257,7 +257,7 @@ function sendMsgTo() {
 }
 
 
-function reloadUserMsgs() {
+function reloadUserMessages() {
 
     var token = localStorage.getItem("token");
     var server_msg = sendToWebSocket({"token":token}, "/get_user_messages_by_token", "POST");
@@ -284,7 +284,7 @@ function reloadUserMsgs() {
 }
 
 
-function reloadMsgs() {
+function reloadMessages() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
@@ -316,7 +316,6 @@ function searchUser() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
-    //cuidao que no usamos token en get user data by email, deberiamos validar el token no?
     var server_msg = sendToWebSocket({"token":token,"email":email}, "/get_user_by_email", "POST");
     var userData;
 
@@ -325,7 +324,7 @@ function searchUser() {
         showSearchError(server_msg.message);
     } else {
         userData = server_msg.data;
-        renderUserTab(userData);
+        renderOtherUserPage(userData);
         openTab("browsetab", "user");
     }
     return false;
@@ -339,7 +338,7 @@ function showSearchError(message) {
 
 
 
-function renderUserTab(userData) {
+function renderOtherUserPage(userData) {
 
     document.getElementById("othNameField").innerHTML = userData.firstname;
     document.getElementById("othFNameField").innerHTML = userData.familyname;
@@ -348,7 +347,7 @@ function renderUserTab(userData) {
     document.getElementById("othGenderField").innerHTML = userData.city;
     document.getElementById("othEmailField").innerHTML = userData.email;
 
-    reloadMsgs();
+    reloadMessages();
 }
 
 
@@ -359,7 +358,7 @@ function back() {
 
 function bindFunctionsWelcome() {
 
-    document.getElementById("loginForm").onsubmit = logIn;
+    document.getElementById("loginForm").onsubmit = signIn;
     document.getElementById("signupForm").onsubmit = signUp;
 
     document.getElementById("s_rpassword").onkeyup = checkPasswords;
@@ -378,13 +377,13 @@ function bindFunctionsProfile() {
         openTab("menu", "account");
     };
 
-    document.getElementById("userMsgReloadButton").onclick = reloadUserMsgs;
+    document.getElementById("userMsgReloadButton").onclick = reloadUserMessages;
     document.getElementById("logout").onclick = signOut;
     document.getElementById("back").onclick = back;
-    document.getElementById("msgReloadButton").onclick = reloadMsgs;
+    document.getElementById("msgReloadButton").onclick = reloadMessages;
 
-    document.getElementById("msgForm").onsubmit = sendMsg;
-    document.getElementById("msgToForm").onsubmit = sendMsgTo;
+    document.getElementById("msgForm").onsubmit = sendMessage;
+    document.getElementById("msgToForm").onsubmit = sendMessageTo;
     document.getElementById("userSearchForm").onsubmit = searchUser;
     document.getElementById("changePassForm").onsubmit = changePassword;
 

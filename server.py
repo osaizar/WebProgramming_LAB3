@@ -10,8 +10,17 @@ from User import User
 from Message import Message, MessageList
 from ReturnedData import ReturnedData
 
+LPORT = 8080 # listen port
+LADDR = '0.0.0.0' # listen address
+
+print "Running server at "+LADDR+":"+str(LPORT)
+
+# TODO: all request are POST,Why?
+
 app = Flask(__name__)
 sockets = Sockets(app)
+
+# START route declarations
 
 @app.route("/client.js")
 def clientjs():
@@ -32,6 +41,8 @@ def wimage():
 @app.route('/')
 def index():
     return render_template('client.html')
+
+# END route declarations
 
 
 def token_generator(size=15, chars=string.ascii_uppercase + string.digits):
@@ -147,8 +158,8 @@ def get_user_messages_by_email():
             messages = db.get_messages_by_user(userId)
             return ReturnedData(True, "Messages found", messages.createJSON()).createJSON()
 
-@app.route("/post_message", methods=["POST"])
-def post_message():
+@app.route("/send_message", methods=["POST"])
+def send_message():
     data = request.get_json(silent = True)
     writerId = db.get_userId_by_token(data["token"])
     writer = db.get_user_by_id(writerId)
@@ -168,5 +179,5 @@ def post_message():
 if __name__ == "__main__":
     from gevent import pywsgi
     from geventwebsocket.handler import WebSocketHandler
-    server = pywsgi.WSGIServer(('0.0.0.0', 5000), app, handler_class=WebSocketHandler)
+    server = pywsgi.WSGIServer((LADDR, LPORT), app, handler_class=WebSocketHandler)
     server.serve_forever()
