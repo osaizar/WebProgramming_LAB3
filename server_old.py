@@ -6,9 +6,6 @@ import database_helper as db
 import string
 import random
 import json
-from gevent import pywsgi
-from geventwebsocket.handler import WebSocketHandler
-
 from User import User
 from Message import Message, MessageList
 from ReturnedData import ReturnedData
@@ -24,27 +21,6 @@ app = Flask(__name__)
 sockets = Sockets(app)
 
 # START route declarations
-
-def websocket_app(environ, start_response):
-    if environ["PATH_INFO"] == "/sign_in":
-            ws = environ["wsgi.websocket"]
-            data = ws.receive()
-            userId = db.get_userId_by_email(data["email"])
-            if userId == None:
-                ws.send(ReturnedData(False, "Email not found").createJSON())
-            elif db.get_user_by_id(userId).password != data["password"]:
-                ws.send(ReturnedData(False, "The password is not correct").createJSON())
-            else:
-                token = token_generator()
-                jToken = {}
-                jToken["token"] = token
-                jToken = json.dumps(jToken)
-                if db.insert_token(token, userId):
-                    ws.send(ReturnedData(True, "User signed in", jToken).createJSON())
-                else:
-                    ws.send(ReturnedData(False, "Database error").createJSON())
-
-
 
 @app.route("/client.js")
 def clientjs():
@@ -73,7 +49,7 @@ def token_generator(size=15, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 
-#@app.route("/sign_in", methods=["POST"])
+@app.route("/sign_in", methods=["POST"])
 def sign_in():
     data = request.get_json(silent = True) # get data
     userId = db.get_userId_by_email(data["email"])
@@ -95,6 +71,7 @@ def sign_in():
 @app.route("/sign_up", methods=["POST"])
 def sign_up():
     data = request.get_json(silent = True) # get data
+    print data
     if db.get_userId_by_email(data["email"]) != None:  # no success
         return ReturnedData(False, "Email already exists").createJSON()
     else:
@@ -200,7 +177,8 @@ def send_message():
         db.insert_message(msg)
         return ReturnedData(True, "Message sent").createJSON()
 
-
 if __name__ == "__main__":
-    http_server = pywsgi.WSGIServer((LADDR, LPORT), app, handler_class=WebSocketHandler)
-    http_server.serve_forever()
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer((LADDR, LPORT), app, handler_class=WebSocketHandler)
+    server.serve_forever()
