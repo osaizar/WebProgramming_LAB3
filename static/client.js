@@ -316,7 +316,7 @@ function searchUser() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
-    var server_msg = sendToWebSocket({"token":token,"email":email}, "/get_user_by_email", "POST");
+    var server_msg = sendToWebSocket({"token":token,"email":email}, "/get_user_data_by_email", "POST");
     var userData;
 
 

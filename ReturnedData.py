@@ -2,7 +2,7 @@ import json
 
 class ReturnedData(object):
 
-    def __init__(self, success, message, data = '"Undefined"'):
+    def __init__(self, success, message, data = ''):
         self.success = success
         self.message = message
         self.data = data
@@ -11,9 +11,11 @@ class ReturnedData(object):
         rdata = {}
         rdata["success"] = self.success
         rdata["message"] = self.message
-        rdata["data"] = "DATAHERE"
-
-        rt = json.dumps(rdata)
-        rt = rt.replace('"DATAHERE"', self.data)
+        if self.data:
+            rdata["data"] = "DATAHERE"
+            rt = json.dumps(rdata)
+            rt = rt.replace('"DATAHERE"', self.data)
+        else:
+            rt = json.dumps(rdata)
 
         return rt

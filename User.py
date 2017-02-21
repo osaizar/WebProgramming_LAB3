@@ -22,6 +22,6 @@ class User(object):
         data["city"] = self.city
         data["country"] = self.country
         data["gender"] = self.gender
-        data["password"] = self.password
+        # Password is not sent because security reasons
 
         return json.dumps(data)

@@ -1,3 +1,0 @@
-# Used packages:
-flask
-flask-sockets
