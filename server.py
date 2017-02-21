@@ -48,65 +48,72 @@ def index():
 # END route declarations
 
 
-@app.route("/sign_in")
-def sign_in():
+@app.route("/connect")
+def connect():
     if request.environ.get("wsgi.websocket"):
         ws = request.environ['wsgi.websocket']
         data = ws.receive()
         print "Got data: "+str(data) # debug
         data = json.loads(data)
+        # Checks
+        userId = db.get_userId_by_token(data["token"])
+        if userId == None:
+            ws.send(ReturnedData(False, "You are not loged in!").createJSON())
+            return ""
 
-        print "checking data:"
-        valid, response = checker.check_sign_in_data(data)
-        if not valid:
-            ws.send(response)
-        try:
-            userId = db.get_userId_by_email(data["email"])
-            if userId == None:
-                print "Email not found"
-                ws.send(ReturnedData(False, "Email not found").createJSON())
-            elif db.get_user_by_id(userId).password != data["password"]:
-                print "pw not correct"
-                ws.send(ReturnedData(False, "The password is not correct").createJSON())
-            else:
-                print "Processing data"
-                if data["email"] in connected_users:
-                    print "user in connected users"
-                    s = connected_users[data["email"]]
-                    s.send(ReturnedData(None, "close:session").createJSON())
-                    db.delete_token_by_email(data["email"])
-                    del connected_users[data["email"]]
+        email = db.get_user_by_id(userId).email
+        connected_users[email] = ws
+        print "The new socket is "+str(ws)
 
-                print "Generatin token"
-                token = token_generator()
-                connected_users[data["email"]] = ws
-                db.insert_token(token, userId)
-                print "Token inserted"
-
-                print "Current sessions:"
-                print str(connected_users)
-
-                jToken = {}
-                jToken["token"] = token
-                jToken = json.dumps(jToken)
-
-                ws.send(ReturnedData(True, "User signed in", jToken).createJSON())
-        except:
-            abort(500)
+        while True: # keep socket open
+            obj = ws.receive()
+            if obj == None:
+                del connected_users[email]
+                ws.close()
+                print 'Socket closed: ' + email
+        return ''
     else:
-        abort(400)
+        ws.send(ReturnedData(False, "Bad request!").createJSON())
 
     return ""
-
-
-def close_session(socket):
-    print "sending deauth"
-    socket.send(ReturnedData(None, "close:session").createJSON())
 
 
 def token_generator(size=15, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
+@app.route("/sign_in", methods=["POST"])
+def sign_in():
+    data = request.get_json(silent = True) # get data
+    valid, response = checker.check_sign_in_data(data)
+    if not valid:
+        return response
+    try:
+        userId = db.get_userId_by_email(data["email"])
+        if userId == None:
+            return ReturnedData(False, "Email not found").createJSON()
+        elif db.get_user_by_id(userId).password != data["password"]:
+            return ReturnedData(False, "The password is not correct").createJSON()
+        else:
+            print "Connected users"+str(connected_users)
+            if data["email"] in connected_users:
+                print "user in connected users"
+                s = connected_users[data["email"]]
+                print str(s)
+                s.send(ReturnedData(None, "close:session").createJSON())
+                print "Json sended"
+                db.delete_token_by_email(data["email"])
+                del connected_users[data["email"]]
+
+            token = token_generator()
+
+            db.insert_token(token, userId)
+            jToken = {}
+            jToken["token"] = token
+            jToken = json.dumps(jToken)
+
+            return ReturnedData(True, "User signed in", jToken).createJSON()
+    except:
+        abort(500)
 
 @app.route("/sign_up", methods=["POST"])
 def sign_up():

@@ -13,7 +13,8 @@ displayView = function() {
     document.getElementById("innerDiv").innerHTML = document.getElementById(viewId).innerHTML;
     if (viewId == PROFILE) {
         bindFunctionsProfile();
-        openTab("menu", "home")
+        openTab("menu", "home");
+        connectToWebSocket();
     } else if (viewId == WELCOME) {
         bindFunctionsWelcome();
     }
@@ -30,13 +31,11 @@ function sendHTTPRequest(data, url, method, onResponse){
 
     xmlhttp.open(method, url);
     xmlhttp.setRequestHeader("Content-Type", "application/json");
-    alert("Sending "+JSON.stringify(data)); // debug
     xmlhttp.send(JSON.stringify(data));
 
     xmlhttp.onreadystatechange = function(){
       if (this.readyState == 4 && this.status == 200){
         response = xmlhttp.responseText;
-        alert(response); //debug
         onResponse(JSON.parse(response));
       }
     }
@@ -47,16 +46,22 @@ function sendToWebSocket(data, url, onRespose){
     alert("sending ws: "+JSON.stringify(data));
     socket.send(JSON.stringify(data));
     socket.onmessage = function(s){
-      alert(s.data);
+      alert("ws got "+s.data);
       response = JSON.parse(s.data);
-      if (response.message.localeCompare("close:session") == 0){
-        alert("bye!");
-        signOut();
-      }else{
-        alert("normal response");
-        onRespose(response);
+      if (response.message == "close:session"){
+        sign_out();
       }
+      onRespose(response);
     };
+}
+
+function connectToWebSocket(){
+  var data = {"token": localStorage.getItem("token")};
+  sendToWebSocket(data, "/connect", function(server_msg){
+    if(!server_msg.success){
+      sign_out();
+    }
+  });
 }
 
 function signIn() {
@@ -65,7 +70,7 @@ function signIn() {
     var password = document.forms["loginForm"]["password"].value;
 
     var data = {"email":email, "password":password};
-    sendToWebSocket(data, "/sign_in",function(server_msg){
+    sendHTTPRequest(data, "/sign_in", "POST", function(server_msg){
       if (!server_msg.success) {
           showSignUpError(server_msg.message);
       } else {
