@@ -24,21 +24,22 @@ window.onload = function() {
     displayView();
 };
 
-function sendToWebSocket(data, url, method){
+function sendHTTPRequest(data, url, method, onResponse){
     var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance
     var response = "";
 
     xmlhttp.open(method, url);
     xmlhttp.setRequestHeader("Content-Type", "application/json");
-    alert("Sending "+JSON.stringify(data))
+    alert("Sending "+JSON.stringify(data)); // debug
     xmlhttp.send(JSON.stringify(data));
 
-    response = xmlhttp.responseText;
-    alert(response);
-    response = xmlhttp.responseText;
-    alert(response);
-
-    return JSON.parse(response);
+    xmlhttp.onreadystatechange = function(){
+      if (this.readyState == 4 && this.status == 200){
+        response = xmlhttp.responseText;
+        alert(response); //debug
+        onResponse(JSON.parse(response));
+      }
+    }
 }
 
 
@@ -48,14 +49,14 @@ function signIn() {
     var password = document.forms["loginForm"]["password"].value;
 
     var data = {"email":email, "password":password};
-    var server_msg = sendToWebSocket(data, "/sign_in", "POST");
-
-    if (!server_msg.success) {
-        showSignUpError(server_msg.message);
-    } else {
-        localStorage.setItem("token", server_msg.data.token);
-        displayView();
-    }
+    sendHTTPRequest(data, "/sign_in", "POST", function(server_msg){
+      if (!server_msg.success) {
+          showSignUpError(server_msg.message);
+      } else {
+          localStorage.setItem("token", server_msg.data.token);
+          displayView();
+      }
+    });
     return false;
 }
 
@@ -100,11 +101,11 @@ function signUp() {
         "country": country
     };
 
-    var server_msg = sendToWebSocket(user, "/sign_up", "POST");
-
-    if (!server_msg.success) {
-        showSignUpError(server_msg.message);
-    }
+    sendHTTPRequest(user, "/sign_up", "POST", function(server_msg){
+      if (!server_msg.success) {
+          showSignUpError(server_msg.message);
+      }
+    });
     return false;
 }
 
@@ -112,14 +113,13 @@ function signUp() {
 function signOut() {
 
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token}, "/sign_out", "POST");
-    if (!server_msg.success) {
+    sendHTTPRequest({"token":token}, "/sign_out", "POST", function(server_msg){
+      if(!server_msg.success){
         showChangePasswordError(server_msg.message);
-        displayView();
-    }else{
-      localStorage.setItem("token", "undefined");
+      }
+      localStorage.setItem("token", "undefined"); // TODO: Mirad esto plis
       displayView();
-    }
+    });
 }
 
 function openTab(tabType, tabName) {
@@ -167,13 +167,14 @@ function changePassword() {
     var npassword = document.forms["changePassForm"]["new_password"].value;
     var cpassword = document.forms["changePassForm"]["current_password"].value;
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token, "old_password": cpassword, "new_password": npassword}, "/change_password", "POST");
-    if (!server_msg.success) {
-        showChangePasswordError(server_msg.message);
-    } else {
-        showChangePasswordSuccess(server_msg.message);
-    }
-
+    var data = {"token":token, "old_password": cpassword, "new_password": npassword};
+    sendHTTPRequest(data, "/change_password", "POST", function(server_msg){
+      if (!server_msg.success) {
+          showChangePasswordError(server_msg.message);
+      } else {
+          showChangePasswordSuccess(server_msg.message);
+      }
+    });
     return false;
 }
 
@@ -196,48 +197,49 @@ function renderCurrentUserPage() {
 
     var token = localStorage.getItem("token");
     var data = {"token":token};
-    var server_msg = sendToWebSocket(data, "/get_user_data_by_token", "POST");
-    var userData;
+    sendHTTPRequest(data, "/get_user_data_by_token", "POST", function(server_msg) {
+      var userData;
 
-    if (server_msg.success) {
-        userData = server_msg.data;
-    } else {
-        return -1; //error
-    }
+      if (server_msg.success) {
+          userData = server_msg.data;
+      } else {
+          return -1; //error
+      }
 
-    document.getElementById("nameField").innerHTML = userData.firstname;
-    document.getElementById("fNameField").innerHTML = userData.familyname;
-    document.getElementById("genderField").innerHTML = userData.gender;
-    document.getElementById("countryField").innerHTML = userData.country;
-    document.getElementById("cityField").innerHTML = userData.city;
-    document.getElementById("emailField").innerHTML = userData.email;
+      document.getElementById("nameField").innerHTML = userData.firstname;
+      document.getElementById("fNameField").innerHTML = userData.familyname;
+      document.getElementById("genderField").innerHTML = userData.gender;
+      document.getElementById("countryField").innerHTML = userData.country;
+      document.getElementById("cityField").innerHTML = userData.city;
+      document.getElementById("emailField").innerHTML = userData.email;
 
-    reloadUserMessages();
+      reloadUserMessages();
+    });
 }
 
 
 function sendMessage() {
 
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token}, "/get_user_data_by_token", "POST");
-    var data;
+    sendHTTPRequest({"token":token}, "/get_user_data_by_token", "POST", function(server_msg){
+      var data;
 
-    if (server_msg.success) {
-        data = server_msg.data;
-    } else {
-        return -1; //error
-    }
+      if (server_msg.success) {
+          data = server_msg.data;
+      } else {
+          return -1; //error
+      }
 
-    var msg = document.forms["msgForm"]["message"].value;
+      var msg = document.forms["msgForm"]["message"].value;
 
-    document.forms["msgForm"]["message"].value = "";
+      document.forms["msgForm"]["message"].value = "";
 
-    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": data.email}, "/send_message", "POST");
+      var server_msg = sendHTTPRequest({"token":token, "msg":msg,"reader": data.email}, "/send_message", "POST");
 
-    reloadUserMessages();
+      reloadUserMessages();
 
-    document.getElementById("msgToMe").value = "";
-
+      document.getElementById("msgToMe").value = "";
+    });
     return false;
 }
 
@@ -248,11 +250,10 @@ function sendMessageTo() {
     var email = document.forms["userSearchForm"]["email"].value;
     var msg = document.forms["msgToForm"]["message"].value;
 
-    var server_msg = sendToWebSocket({"token":token, "msg":msg,"reader": email}, "/send_message", "POST");
-    reloadMessages();
-
-    document.getElementById("msgTo").value = "";
-
+    sendHTTPRequest({"token":token, "msg":msg,"reader": email}, "/send_message", "POST", function(server_msg){
+      reloadMessages();
+      document.getElementById("msgTo").value = "";
+    });
     return false;
 }
 
@@ -260,27 +261,27 @@ function sendMessageTo() {
 function reloadUserMessages() {
 
     var token = localStorage.getItem("token");
-    var server_msg = sendToWebSocket({"token":token}, "/get_user_messages_by_token", "POST");
-    var messages;
+    sendHTTPRequest({"token":token}, "/get_user_messages_by_token", "POST", function(server_msg) {
+      var messages;
 
-    if (server_msg.success) {
-        messages = server_msg.data;
-    } else {
-        return -1; //error
-    }
+      if (server_msg.success) {
+          messages = server_msg.data;
+      } else {
+          return -1; //error
+      }
 
-    var msgDiv = document.getElementById("userMessageDiv");
+      var msgDiv = document.getElementById("userMessageDiv");
 
-    while (msgDiv.firstChild) {
-        msgDiv.removeChild(msgDiv.firstChild);
-    }
+      while (msgDiv.firstChild) {
+          msgDiv.removeChild(msgDiv.firstChild);
+      }
 
-    for (var i = 0; i < messages.length; i++) {
-        var p = document.createElement('p');
-        p.innerHTML = "<b>" + messages[i].content + "</b> by " + messages[i].writer;
-        msgDiv.appendChild(p);
-    }
-
+      for (var i = 0; i < messages.length; i++) {
+          var p = document.createElement('p');
+          p.innerHTML = "<b>" + messages[i].content + "</b> by " + messages[i].writer;
+          msgDiv.appendChild(p);
+      }
+    });
 }
 
 
@@ -288,27 +289,27 @@ function reloadMessages() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
-    var server_msg = sendToWebSocket({"token":token, "email":email}, "/get_user_messages_by_email", "POST");
-    var messages;
+    sendHTTPRequest({"token":token, "email":email}, "/get_user_messages_by_email", "POST", function(server_msg){
+      var messages;
 
-    if (server_msg.success) {
-        messages = server_msg.data;
-    } else {
-        return -1; //error
-    }
+      if (server_msg.success) {
+          messages = server_msg.data;
+      } else {
+          return -1; //error
+      }
 
-    var msgDiv = document.getElementById("messageDiv");
+      var msgDiv = document.getElementById("messageDiv");
 
-    while (msgDiv.firstChild) {
-        msgDiv.removeChild(msgDiv.firstChild);
-    }
+      while (msgDiv.firstChild) {
+          msgDiv.removeChild(msgDiv.firstChild);
+      }
 
-    for (var i = 0; i < messages.length; i++) {
-        var p = document.createElement('p');
-        p.innerHTML = "<b>" + messages[i].content + "</b> by " + messages[i].writer;
-        msgDiv.appendChild(p);
-    }
-
+      for (var i = 0; i < messages.length; i++) {
+          var p = document.createElement('p');
+          p.innerHTML = "<b>" + messages[i].content + "</b> by " + messages[i].writer;
+          msgDiv.appendChild(p);
+      }
+    });
 }
 
 
@@ -316,17 +317,17 @@ function searchUser() {
 
     var token = localStorage.getItem("token");
     var email = document.forms["userSearchForm"]["email"].value;
-    var server_msg = sendToWebSocket({"token":token,"email":email}, "/get_user_data_by_email", "POST");
-    var userData;
+    sendHTTPRequest({"token":token,"email":email}, "/get_user_data_by_email", "POST", function(server_msg){
+      var userData;
 
-
-    if (!server_msg.success) {
-        showSearchError(server_msg.message);
-    } else {
-        userData = server_msg.data;
-        renderOtherUserPage(userData);
-        openTab("browsetab", "user");
-    }
+      if (!server_msg.success) {
+          showSearchError(server_msg.message);
+      } else {
+          userData = server_msg.data;
+          renderOtherUserPage(userData);
+          openTab("browsetab", "user");
+      }
+    });
     return false;
 }
 

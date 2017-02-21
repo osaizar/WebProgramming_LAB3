@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 from flask import Flask, request, render_template, abort
+from gevent import pywsgi
+from geventwebsocket.handler import WebSocketHandler
 import database_helper as db
 import checker
 import string
@@ -14,6 +16,9 @@ from ReturnedData import ReturnedData
 
 
 app = Flask(__name__)
+
+LPORT = 8080
+LADDR = "127.0.0.1"
 
 # START route declarations
 
@@ -38,6 +43,12 @@ def index():
     return render_template('client.html')
 
 # END route declarations
+
+def websocket_app(environ, start_response):
+    if environ["PATH_INFO"] == "/sign_in":
+        ws = environ["wsgi.websocket"]
+        data = ws.receive()
+
 
 
 def token_generator(size=15, chars=string.ascii_uppercase + string.digits):
@@ -219,4 +230,7 @@ def send_message():
         abort(500)
 
 if __name__ == "__main__":
+    print "Starting server at "+LADDR+":"+str(LPORT)
     app.run()
+    http_server = pywsgi.WSGIServer((LADDR, LPORT), websocket_app, handler_class=WebSocketHandler)
+    http_server.serve_forever()
