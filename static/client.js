@@ -42,6 +42,20 @@ function sendHTTPRequest(data, url, method, onResponse){
     }
 }
 
+function sendToWebSocket(data, url, onRespose){
+    var socket = new WebSocket("ws://localhost:8080"+url); //localhost ??
+    alert("sending ws: "+JSON.stringify(data));
+    socket.send(JSON.stringify(data));
+    socket.onmessage = function(s){
+      alert(s.data);
+      response = JSON.parse(s.data);
+      if (response.message.localeCompare("close:session")){
+        signOut();
+      }else{
+        onRespose(response);
+      }
+    };
+}
 
 function signIn() {
 
@@ -49,7 +63,7 @@ function signIn() {
     var password = document.forms["loginForm"]["password"].value;
 
     var data = {"email":email, "password":password};
-    sendHTTPRequest(data, "/sign_in", "POST", function(server_msg){
+    sendToWebSocket(data, "/sign_in",function(server_msg){
       if (!server_msg.success) {
           showSignUpError(server_msg.message);
       } else {

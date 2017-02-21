@@ -15,10 +15,13 @@ from Message import Message, MessageList
 from ReturnedData import ReturnedData
 
 
+
 app = Flask(__name__)
 
 LPORT = 8080
 LADDR = "127.0.0.1"
+
+connected_users = [] # List of dictionaries (email and socket)
 
 # START route declarations
 
@@ -44,38 +47,68 @@ def index():
 
 # END route declarations
 
-def websocket_app(environ, start_response):
-    if environ["PATH_INFO"] == "/sign_in":
-        ws = environ["wsgi.websocket"]
-        data = ws.receive()
 
+@app.route("/sign_in")
+def sign_in():
+    if request.environ.get("wsgi.websocket"):
+        ws = request.environ['wsgi.websocket']
+        data = ws.receive()
+        print "Got data: "+str(data) # debug
+        data = json.loads(data)
+
+        print "checking data:"
+        valid, response = checker.check_sign_in_data(data)
+        if not valid:
+            ws.send(response)
+        try:
+            userId = db.get_userId_by_email(data["email"])
+            if userId == None:
+                print "Email not found"
+                ws.send(ReturnedData(False, "Email not found").createJSON())
+            elif db.get_user_by_id(userId).password != data["password"]:
+                print "pw not correct"
+                ws.send(ReturnedData(False, "The password is not correct").createJSON())
+            else:
+                print "Processing data"
+                for i, user in enumerate(connected_users):
+                    print "checking: "+user["email"]
+                    if user["email"] == data["email"]:
+                        print "Deleting "+user["email"]
+                        close_session(user["socket"])
+                        db.delete_token_by_email(data["email"])
+                        print "Token deleted"
+                        connected_users.pop(i)
+                        print "User removed from list"
+
+                token = token_generator()
+                connected_users.append({"email":data["email"], "socket":ws})
+                db.insert_token(token, userId)
+                print "Token inserted"
+
+                print "Current sessions:"
+                for s in connected_users:
+                    print s["email"]+" : "+str(s["socket"])
+
+                jToken = {}
+                jToken["token"] = token
+                jToken = json.dumps(jToken)
+
+                ws.send(ReturnedData(True, "User signed in", jToken).createJSON())
+        except:
+            abort(500)
+    else:
+        abort(400)
+
+    return ""
+
+
+def close_session(socket):
+    print "sending deauth"
+    socket.send(ReturnedData(None, "close:session").createJSON())
 
 
 def token_generator(size=15, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
-
-
-@app.route("/sign_in", methods=["POST"])
-def sign_in():
-    data = request.get_json(silent = True) # get data
-    valid, response = checker.check_sign_in_data(data)
-    if not valid:
-        return response
-    try:
-        userId = db.get_userId_by_email(data["email"])
-        if userId == None:
-            return ReturnedData(False, "Email not found").createJSON()
-        elif db.get_user_by_id(userId).password != data["password"]:
-            return ReturnedData(False, "The password is not correct").createJSON()
-        else:
-            token = token_generator()
-            jToken = {}
-            jToken["token"] = token
-            jToken = json.dumps(jToken)
-            db.insert_token(token, userId)
-            return ReturnedData(True, "User signed in", jToken).createJSON()
-    except:
-        abort(500)
 
 
 @app.route("/sign_up", methods=["POST"])
@@ -231,6 +264,5 @@ def send_message():
 
 if __name__ == "__main__":
     print "Starting server at "+LADDR+":"+str(LPORT)
-    app.run()
-    http_server = pywsgi.WSGIServer((LADDR, LPORT), websocket_app, handler_class=WebSocketHandler)
+    http_server = pywsgi.WSGIServer((LADDR, LPORT), app, handler_class=WebSocketHandler)
     http_server.serve_forever()

@@ -116,6 +116,15 @@ def delete_token(token):
     else:
         return False
 
+def delete_token_by_email(email):
+    cur = run_query("DELETE FROM Session WHERE userId = (SELECT id \
+                                                         FROM User \
+                                                         WHERE email = '%s')" % email)
+    if cur.rowcount > 0:
+        return True
+    else:
+        return False
+
 
 def insert_message(message):
     toId = get_userId_by_email(message.reader)
