@@ -49,9 +49,11 @@ function sendToWebSocket(data, url, onRespose){
     socket.onmessage = function(s){
       alert(s.data);
       response = JSON.parse(s.data);
-      if (response.message.localeCompare("close:session")){
+      if (response.message.localeCompare("close:session") == 0){
+        alert("bye!");
         signOut();
       }else{
+        alert("normal response");
         onRespose(response);
       }
     };

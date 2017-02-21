@@ -21,7 +21,7 @@ app = Flask(__name__)
 LPORT = 8080
 LADDR = "127.0.0.1"
 
-connected_users = [] # List of dictionaries (email and socket)
+connected_users = dict()# List of dictionaries (email and socket)
 
 # START route declarations
 
@@ -70,24 +70,21 @@ def sign_in():
                 ws.send(ReturnedData(False, "The password is not correct").createJSON())
             else:
                 print "Processing data"
-                for i, user in enumerate(connected_users):
-                    print "checking: "+user["email"]
-                    if user["email"] == data["email"]:
-                        print "Deleting "+user["email"]
-                        close_session(user["socket"])
-                        db.delete_token_by_email(data["email"])
-                        print "Token deleted"
-                        connected_users.pop(i)
-                        print "User removed from list"
+                if data["email"] in connected_users:
+                    print "user in connected users"
+                    s = connected_users[data["email"]]
+                    s.send(ReturnedData(None, "close:session").createJSON())
+                    db.delete_token_by_email(data["email"])
+                    del connected_users[data["email"]]
 
+                print "Generatin token"
                 token = token_generator()
-                connected_users.append({"email":data["email"], "socket":ws})
+                connected_users[data["email"]] = ws
                 db.insert_token(token, userId)
                 print "Token inserted"
 
                 print "Current sessions:"
-                for s in connected_users:
-                    print s["email"]+" : "+str(s["socket"])
+                print str(connected_users)
 
                 jToken = {}
                 jToken["token"] = token
