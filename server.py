@@ -139,8 +139,15 @@ def sign_out():
     if not valid:
         return response
     try:
-        if db.delete_token(data["token"]):
-            return ReturnedData(True, "Signed out").createJSON()
+        userId = db.get_userId_by_token(data["token"])
+        print "Connected users"+str(connected_users)
+        if userId != None:
+            email = db.get_user_by_id(userId).email
+            if email != None:
+                if db.delete_token(data["token"]):
+                    del connected_users[email]
+                    print "Connected users"+str(connected_users)
+                    return ReturnedData(True, "Signed out").createJSON()
         else:
             return ReturnedData(False, "You are not logged in (Invalid token)").createJSON()
     except:
