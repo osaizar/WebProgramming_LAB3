@@ -55,7 +55,10 @@ def connect():
         data = ws.receive()
         print "Got data: "+str(data) # debug
         data = json.loads(data)
-        # Checks
+        valid, response = checker.check_token(data)
+        if not valid:
+            ws.send(response)
+            return ""
         userId = db.get_userId_by_token(data["token"])
         if userId == None:
             ws.send(ReturnedData(False, "You are not loged in!").createJSON())
@@ -66,11 +69,13 @@ def connect():
         print "The new socket is "+str(ws)
 
         while True: # keep socket open
-            obj = ws.receive()
-            if obj == None:
-                del connected_users[email]
-                ws.close()
-                print 'Socket closed: ' + email
+            try:
+                obj = ws.receive()
+                if obj == None:
+                    del connected_users[email]
+                    ws.close()
+            except:
+                break
         return ''
     else:
         ws.send(ReturnedData(False, "Bad request!").createJSON())
@@ -94,13 +99,10 @@ def sign_in():
         elif db.get_user_by_id(userId).password != data["password"]:
             return ReturnedData(False, "The password is not correct").createJSON()
         else:
-            print "Connected users"+str(connected_users)
+            print "Connected users"+str(connected_users) # debug
             if data["email"] in connected_users:
-                print "user in connected users"
                 s = connected_users[data["email"]]
-                print str(s)
-                s.send(ReturnedData(None, "close:session").createJSON())
-                print "Json sended"
+                s.send(ReturnedData(False, "close:session").createJSON())
                 db.delete_token_by_email(data["email"])
                 del connected_users[data["email"]]
 
@@ -154,7 +156,7 @@ def sign_out():
         else:
             return ReturnedData(False, "You are not logged in (Invalid token)").createJSON()
     except:
-        alert(500)
+        abort(500)
 
 
 @app.route("/change_password", methods=["POST"])

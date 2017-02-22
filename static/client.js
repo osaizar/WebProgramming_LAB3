@@ -43,23 +43,50 @@ function sendHTTPRequest(data, url, method, onResponse){
 
 function sendToWebSocket(data, url, onRespose){
     var socket = new WebSocket("ws://localhost:8080"+url); //localhost ??
-    alert("sending ws: "+JSON.stringify(data));
-    socket.send(JSON.stringify(data));
-    socket.onmessage = function(s){
-      alert("ws got "+s.data);
-      response = JSON.parse(s.data);
-      if (response.message == "close:session"){
-        sign_out();
-      }
-      onRespose(response);
-    };
+    waitForConnection(function(){
+      alert("sending ws: "+JSON.stringify(data));
+      socket.send(JSON.stringify(data));
+      socket.onmessage = function(s){
+        alert("ws got "+s.data);
+        response = JSON.parse(s.data);
+        if (!response.success){
+          handleSocketError(response.message)
+        }else{
+          onRespose(response);
+        }
+        onRespose(response);
+      };
+    }, socket);
+}
+
+function handleSocketError(message) {
+  switch (message) {
+    case "close:session":
+      signOut();
+      break;
+    case "You are not loged in!":
+      signOut();
+      break;
+    default:
+      break;
+  }
+}
+
+function waitForConnection(callback, socket){
+  if(socket.readyState == 1){
+    callback();
+  }else{
+    setTimeout(function(){
+      waitForConnection(callback, socket);
+    }, 1000);
+  }
 }
 
 function connectToWebSocket(){
   var data = {"token": localStorage.getItem("token")};
   sendToWebSocket(data, "/connect", function(server_msg){
     if(!server_msg.success){
-      sign_out();
+      signOut();
     }
   });
 }
