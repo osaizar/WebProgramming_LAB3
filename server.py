@@ -53,7 +53,6 @@ def connect():
     if request.environ.get("wsgi.websocket"):
         ws = request.environ['wsgi.websocket']
         data = ws.receive()
-        print "Got data: "+str(data) # debug
         data = json.loads(data)
         valid, response = checker.check_token(data)
         if not valid:
@@ -66,7 +65,6 @@ def connect():
 
         email = db.get_user_by_id(userId).email
         connected_users[email] = ws
-        print "The new socket is "+str(ws)
 
         while True: # keep socket open
             try:
@@ -99,7 +97,6 @@ def sign_in():
         elif db.get_user_by_id(userId).password != data["password"]:
             return ReturnedData(False, "The password is not correct").createJSON()
         else:
-            print "Connected users"+str(connected_users) # debug
             if data["email"] in connected_users:
                 s = connected_users[data["email"]]
                 s.send(ReturnedData(False, "close:session").createJSON())
@@ -142,13 +139,11 @@ def sign_out():
         return response
     try:
         userId = db.get_userId_by_token(data["token"])
-        print "Connected users"+str(connected_users)
         if userId != None:
             email = db.get_user_by_id(userId).email
             if email != None:
                 if db.delete_token(data["token"]):
                     del connected_users[email]
-                    print "Connected users"+str(connected_users)
                 return ReturnedData(True, "Signed out").createJSON()
             else:
                 return ReturnedData(True, "Invalid email").createJSON() # no deberia salir nunca
